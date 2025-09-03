@@ -113,19 +113,45 @@ This build utilizes a shared SPI bus for the Display, MicroSD card, CC1101, and 
 ### Prerequisites & Tools
 - All components listed in the Hardware Specifications.
 - **Tools**: Soldering iron, breadboard, jumper wires, wire cutters, multimeter.
-- **Software**: Arduino IDE or the Bruce Web Flasher.
+- **Software**: VS Code with PlatformIO, Arduino IDE, or a modern web browser.
 
 ### Step-by-Step Assembly
-The assembly process involves connecting each module to the ESP32-S3 according to the pinout tables above.
+This guide ensures a logical workflow, starting with the power system to prevent damage to sensitive components.
 
-1.  **Mount Core Components**: Place the ESP32-S3 on a breadboard or custom PCB.
-2.  **Connect Display**: Wire the ILI9341 display, connecting the power (VCC, GND), shared SPI (SCK, MOSI), and control (CS, DC, RST, BL) pins.
-3.  **Connect Navigation**: Wire the joystick (X, Y, SW) and the right-hand/top buttons to their respective GPIO pins. Remember to use 10kΩ pull-up resistors for all buttons, connecting the GPIO pin to 3.3V.
-4.  **Connect Radios**: Wire the CC1101 and optional nRF24 modules to the shared SPI bus, ensuring each has its unique CS pin connected.
-5.  **Connect NFC**: Wire the PN532 module using the I²C pins (SDA, SCL).
-6.  **Connect IR Components**: Wire the TSOP1738 receiver and the IR LED. Use a 330Ω current-limiting resistor for the IR LED.
-7.  **Connect Power System**: Carefully assemble the power circuit. Connect the Li-Po battery to the TC4056 charger's B+/B- terminals. Wire the charger's OUT+/- through the power switch to the LM2596T regulator, which then supplies a stable 3.3V to the ESP32-S3 and all modules.
-8.  **Final Check**: Use a multimeter to check for short circuits between power and ground before applying power for the first time.
+**1. Assemble the Power System**
+*   **Connect Battery to Charger**: Solder the Li-Po battery leads to the `B+` and `B-` terminals on the TC4056 charger module.
+*   **Wire the Power Switch**: Solder the `OUT+` from the TC4056 to one pin of your rocker switch. Solder a wire from the other pin of the switch to the `VIN` (input) of the LM2596T regulator.
+*   **Connect Regulator Ground**: Solder the `OUT-` from the TC4056 directly to the `GND` (input) of the LM2596T.
+*   **Set Output Voltage**: Before connecting the ESP32, connect the battery and turn the power switch on. Use a multimeter to measure the output voltage of the LM2596T. Carefully turn the potentiometer on the regulator until the output is a stable **3.3V**. This is a critical step.
+*   **Power Off**: Turn the switch off before proceeding.
+
+**2. Connect Core and Input Components**
+*   **Mount ESP32-S3**: Place the ESP32-S3 on your breadboard or protoboard.
+*   **Power the ESP32**: Connect the `3.3V` output from the LM2596T to the `3V3` pin on the ESP32, and the `GND` output to a `GND` pin on the ESP32.
+*   **Connect the Display**:
+    *   Connect the display's VCC and GND pins to the 3.3V and GND rails.
+    *   Connect the shared SPI pins (`SCK`, `MOSI`, `MISO`) from the ESP32 to the corresponding pins on the ILI9341.
+    *   Connect the display-specific control pins (`CS`, `DC`, `RST`) to their assigned GPIOs on the ESP32 as per the pinout table.
+*   **Wire the Joystick and Buttons**:
+    *   Connect the joystick's `VRx` and `VRy` pins to `GPIO 36` and `GPIO 39`.
+    *   Connect the joystick's `SW` pin and all other tactile buttons to their assigned GPIOs.
+    *   Connect the other leg of each button to `GND`. The firmware will use internal pull-up resistors.
+
+**3. Wire Communication Modules**
+*   **Connect Shared SPI Modules (MicroSD, CC1101, nRF24)**:
+    *   Connect the `SCK`, `MOSI`, and `MISO` pins of each module in parallel to the shared SPI bus (GPIO 18, 23, 19).
+    *   Connect the unique Chip Select (`CS` or `CSN`) pin of each module to its specific GPIO as defined in the pinout table (e.g., MicroSD CS to GPIO 16, CC1101 CSN to GPIO 5).
+    *   Connect any additional control pins (`GDO0`, `CE`, `IRQ`) to their respective GPIOs.
+    *   Power each module from the 3.3V and GND rails.
+*   **Connect I²C Module (PN532)**:
+    *   Connect the PN532's `SDA` and `SCL` pins to GPIO 21 and 22 on the ESP32.
+    *   Power the module from the 3.3V and GND rails.
+
+**4. Final Connections & Verification**
+*   **Connect IR Components**:
+    *   Connect the signal pin of the TSOP1738 receiver to `GPIO 7`. Connect its VCC and GND to the 3.3V rails.
+    *   Connect the Anode (+) of the IR LED to `GPIO 8`. Connect the Cathode (-) through a 220-330Ω current-limiting resistor to `GND`.
+*   **Final Check**: With the power switch OFF, use a multimeter in continuity mode to check for shorts between the `3.3V` and `GND` rails. If there are no shorts, you are ready to apply power.
 
 ### Firmware Installation
 Choose one of the following methods to flash the Bruce firmware.
@@ -135,17 +161,33 @@ This is the simplest method and requires no software installation.
 1.  **Enter Bootloader Mode**: Hold the **BOOT** button on the ESP32-S3, connect it to your PC via USB, then release the button.
 2.  **Launch Flasher**: Open a Chrome/Edge browser and go to **[https://bruce.computer/flasher](https://bruce.computer/flasher)**.
 3.  **Flash Firmware**:
-    - Select "Latest Release" and **"Custom Boards Launcher"**.
-    - Click **CONNECT** and select the serial port of your device.
-    - Click **INSTALL**. **Crucially, check the "Erase device" box** before confirming.
+    *   Select "Latest Release" and **"Custom Boards Launcher"**.
+    *   Click **CONNECT** and select the serial port of your device.
+    *   Click **INSTALL**. **Crucially, check the "Erase device" box** before confirming.
 4.  **Reboot**: Once complete, unplug and replug the USB cable to start the device.
 
-#### Method 2: Arduino IDE
-This method is for users who prefer compiling from source. We recommend the community fork pre-configured for the ILI9341 display.
+#### Method 2: VS Code with PlatformIO (Recommended for Customization)
+Ideal for developers who want to modify the source code.
+1.  **Setup VS Code**:
+    *   Install Visual Studio Code.
+    *   Install the **PlatformIO IDE** extension from the marketplace.
+2.  **Download Source Code**:
+    *   Clone the repository: `git clone https://github.com/sivabala21/Bruce.git`
+    *   Open the cloned folder in VS Code (`File > Open Folder...`).
+3.  **Configure and Build**:
+    *   PlatformIO will automatically detect the `platformio.ini` file and may prompt you to install necessary libraries and platforms. Allow it to do so.
+    *   The `platformio.ini` file contains different environments (e.g., `[env:lord-board]`). Ensure the pin definitions in the source code (`/src/` or `/include/`) match your pinout table.
+4.  **Upload Firmware**:
+    *   Put your ESP32-S3 into **Bootloader Mode** (Hold BOOT, connect USB, release BOOT).
+    *   In VS Code, click the **PlatformIO icon** (alien head) in the activity bar.
+    *   Under your project's environments, find the correct target and click **Upload**. Alternatively, use the command palette (`Ctrl+Shift+P`) and run `PlatformIO: Upload`.
+
+#### Method 3: Arduino IDE
+This method is for users who prefer compiling from source within the Arduino ecosystem.
 1.  **Setup Arduino IDE**:
-    - Install the Arduino IDE.
-    - Add the ESP32 board manager URL in Preferences: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
-    - Install "esp32" from the Boards Manager.
+    *   Install the Arduino IDE.
+    *   Add the ESP32 board manager URL in Preferences: `https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json`
+    *   Install "esp32" from the Boards Manager.
 2.  **Download Source Code**:
     ```bash
     git clone https://github.com/sivabala21/Bruce.git
@@ -153,10 +195,10 @@ This method is for users who prefer compiling from source. We recommend the comm
 3.  **Install Libraries**: Open the sketch in the Arduino IDE. Use the Library Manager to install **LovyanGFX** and any other missing libraries indicated by the compiler.
 4.  **Verify Pinout**: Open the project's configuration files (e.g., in an `include/configs` folder) and double-check that the pin definitions match the tables in this document. Adjust if necessary.
 5.  **Build and Upload**:
-    - Select Board: `Tools > Board > ESP32S3 Dev Module`.
-    - Configure Board Settings: Enable `OPI PSRAM`.
-    - **Enter Bootloader Mode** (see Method 1).
-    - Click **Upload**.
+    *   Select Board: `Tools > Board > ESP32S3 Dev Module`.
+    *   Configure Board Settings: Enable `OPI PSRAM`.
+    *   **Enter Bootloader Mode** (see Method 1).
+    *   Click **Upload**.
 
 ---
 
