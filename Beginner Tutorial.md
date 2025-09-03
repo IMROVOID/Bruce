@@ -1,368 +1,196 @@
-# Complete Documentation for a Custom Bruce ESP32 Device
+# My First DIY Security Tool: The Bruce ESP32 Gamepad
 
-This guide walks you through building a powerful, handheld device using an ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam, a 2.8" TFT LCD (ILI9341) display, and modules like CC1101, TSOP1738, and PN532. It’s designed to work with the Bruce firmware and features a game-controller-style layout with a joystick on the left, four action buttons on the right, and two optional shoulder buttons for intuitive navigation. The assembly section is super detailed, simple, and step-by-step, covering all components—even the optional ones—so anyone can follow along\!
+**A step-by-step guide to building your own Flipper Zero alternative with a simple gamepad design.**
+
+This project uses the powerful and fun **Bruce Firmware** on an **ESP32-S3** brain, with a user-friendly ILI9341 color screen.
 
 ---
 
-## Component Checklist
+## 🔍 What Are We Building?
 
-### Core Components
+Welcome! This guide will walk you through building a handheld device for exploring the world of technology. Think of it as a pocket-sized multi-tool for electronics and security research. It's built with a game controller layout, making it easy and intuitive to use. We'll cover picking your parts, wiring everything together, and getting the software running.
 
-* Microcontroller: ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam (or a similar ESP32-S3 board)  
-  * *Features: Dual-core Xtensa LX7 CPU up to 240 MHz, Wi-Fi 802.11 b/g/n, Bluetooth 5.0 LE, 16 MB Flash, 8 MB PSRAM, integrated 5MP OV5640 camera with 2592x1944 resolution.*  
-* Display: 2.8" TFT LCD (ILI9341)  
-  * *Specs: 320×240 pixels, SPI interface, 3.3V\~5V, RGB 65K colors, white LED backlight, no touch sensor, with SD card slot*  
-* PCB Board: A breadboard or custom PCB for assembly.  
-* Case/Enclosure: To house the final project.
+## ⚡ The Parts List (Hardware Specifications)
 
-### Navigation Controls
+Here's a breakdown of the components you'll need.
 
-* Joystick Module (Dual-axis XY): For primary navigation.  
-* Tactile Push Buttons (6 units): Four for the right-hand action buttons and two for optional top-mounted shoulder buttons.
+### The "Brain"
+- **Microcontroller**: ESP32-S3 WROOM1 N16R8. This is the main chip that runs everything.
+- **Flash Memory**: 16 MB (to store the firmware).
+- **PSRAM**: 8 MB (extra memory for smooth operation).
+- **Storage**: A MicroSD card slot (to save files, just like in a camera).
 
-### Modules
+### Screen and Controls
+- **Display**: 2.8" ILI9341 TFT LCD. A bright, colorful screen to see what's happening.
+- **Navigation**: An XY Joystick, like on a game controller, for moving through menus.
+- **Buttons**: A set of tactile push-buttons for selecting options.
 
-* RF Module: CC1101 RF Module (315/433/868/915 MHz)  
-* RFID/NFC Module: PN532 NFC/RFID V3 (13.56 MHz)  
-* IR Components  
-  * TSOP1738 IR Receiver  
-  * IR LED (5mm) (2 units)  
-* MicroSD Card Adapter Module (Optional)  
-* NRF24 Module (Optional)
+### Wireless Tools
+- **WiFi & Bluetooth**: Built right into the ESP32-S3.
+- **Sub-GHz Radio**: A CC1101 module to interact with devices like garage door openers and remote controls.
+- **2.4GHz Radio** (Optional): An nRF24L01+ module for other common wireless signals.
+- **NFC/RFID**: A PN532 module to read things like key cards and payment tags.
+
+### Infrared (Like a TV Remote)
+- **IR Transmitter**: An IR LED to send signals.
+- **IR Receiver**: A TSOP1738 sensor to capture and record signals.
 
 ### Power System
-
-* Power Supply: 2000 mAh Li-Po Battery  
-* Charger Module: TC4056 Charger Module (USB-C, 1A)  
-* 3.3V Regulator: LM2596T (TO-220-5)  
-* On/Off Switch: 2-pin Rocker Switch
-
-### Wiring & Passive Components
-
-* Jumper Wires  
-  * Male-to-Male (M→M) 10cm (40-pack)  
-  * Male-to-Female (M→F) 10cm (40-pack)  
-  * Female-to-Female (F→F) 10cm (40-pack)  
-* Pin Headers  
-  * Male 1x40 Long (2 units)  
-  * Female 1x40 Right-Angle (2 units)  
-* Breadboard (GL Brand, mini, 170 holes)  
-* Capacitors: 10 µF, 16V, electrolytic (2 units)  
-* Resistors  
-  * 330 Ω (0.25W, 5%, 50-pack)  
-  * 10 kΩ (0.25W, 5%, 50-pack)  
-* Transistors: 2N2222, TO-92 (5 units)  
-* MicroSD Card: 16GB
+- **Battery**: A 2000 mAh Li-Po Battery to make it portable.
+- **Charging**: A TC4056 USB-C board to safely charge the battery.
+- **Voltage Regulation**: An LM2596T module. This is very important as it safely steps down the battery's voltage to the 3.3V that our components need.
+- **Power Switch**: A simple rocker switch to turn it on and off.
 
 ---
 
-## Step-by-Step Assembly Guide
+## 📌 Wiring Guide (Pin Configuration)
 
-This section is your complete, super-detailed, and easy-to-follow guide to assembling the device. It covers every component—including optional ones—so you won’t miss a thing. Let’s build it together\!
+Think of this as the recipe for connecting everything to the right place on the ESP32 brain. Each component needs to talk to the ESP32 through a specific "pin" (GPIO).
 
-### Tools You’ll Need
+### The Main Data Highway (Shared SPI Bus)
+Some parts can share the same data lines to save space. We connect them all to these three pins:
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| SCK      | GPIO 18      |
+| MOSI     | GPIO 23      |
+| MISO     | GPIO 19      |
 
-Before starting, gather these tools:
+### Color Screen (ILI9341 TFT)
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| CS       | GPIO 12      |
+| DC       | GPIO 2       |
+| RST      | GPIO 4       |
+| BL       | 3.3V         |
 
-* Breadboard (mini, 170 holes)  
-* Jumper Wires (M→M, M→F, F→F)  
-* Soldering Iron (if you need to attach headers to modules)  
-* Wire Cutters (to trim wires if they’re too long)  
-* Multimeter (to check connections and avoid mistakes)  
-* Screwdriver (to secure parts in the case later)
+### MicroSD Card
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| CS       | GPIO 16      |
 
-### Step 1: Set Up Your Workspace
+### Sub-GHz Radio (CC1101)
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| CSN (CS) | GPIO 5       |
+| GDO0     | GPIO 13      |
 
-1. Clear a Space: Find a flat, clean table to work on.  
-2. Place the Breadboard: Put your mini breadboard in the center. It’s your base for everything\!  
-3. Gather Components: Lay out all your parts (*CC1101*, *TSOP1738*, *jumper wires*, etc.) and tools so they’re easy to reach.  
-4. Get Ready: Have the *ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam*, *display*, and other parts handy.
+### 2.4GHz Radio (nRF24L01+)
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| CSN (CS) | GPIO 17      |
+| CE       | GPIO 6       |
+| IRQ      | GPIO 1       |
 
-### Step 2: Mount the ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam
+### NFC Reader (PN532)
+This uses a different, simpler connection called I²C.
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| SDA      | GPIO 21      |
+| SCL      | GPIO 22      |
 
-1. Get the ESP32-S3: Take the *ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam* out of the box.  
-2. Place It on the Breadboard: Push its pins gently into the breadboard. Line it up so half the pins are on one side of the breadboard’s middle groove and half on the other. It should sit flat and firm.  
-3. Check the Pins: Make sure no pins are bent and they’re all plugged in.  
-4. Temporary Power: For now, plug the *ESP32-S3 WROOM1 N16R8 \+ OV5640 Cam* into your computer with a USB cable to power it. We’ll add the battery later.
+### Infrared (IR Blaster)
+| Function | ESP32-S3 Pin |
+|----------|--------------|
+| IR RX    | GPIO 7       |
+| IR TX    | GPIO 8       |
 
-### Step 3: Connect the Display (2.8" TFT LCD ILI9341)
-
-The display shows the device’s interface. Let’s wire it up carefully.
-
-1. Get the Display: Find its pins: VCC, GND, SCK, SDA (or MOSI), CS, DC, RST, BL (backlight). Note: This display includes an SD card slot for expansion.  
-2. Power It Up:  
-   * Take a jumper wire (*M→F* works great).  
-   * Plug one end into VCC on the display and the other into 3.3V on the *ESP32-S3* (look for a pin labeled *3V3* or *VIN*).  
-   * Use another wire to connect GND on the display to GND on the *ESP32-S3*.  
-3. Hook Up the SPI Wires:  
-   * SCK (clock) → *ESP32-S3* GPIO 18 (use a wire to connect them).  
-   * SDA (data, also called MOSI) → *ESP32-S3* GPIO 23\.  
-4. Control Wires:  
-   * CS (chip select) → *ESP32-S3* GPIO 12 (adjusted to avoid conflicts with other components).  
-   * DC (data/command) → *ESP32-S3* GPIO 2\.  
-   * RST (reset) → *ESP32-S3* GPIO 4\.  
-5. Light the Screen:  
-   * Connect BL (backlight) to *ESP32-S3* 3.3V. If it’s too bright or you’re worried about power, add a 330 Ω resistor between *BL* and *3.3V*.  
-6. Double-Check: Make sure all wires are secure and not loose. If using the display's built-in SD card slot instead of the separate module, wire its CS to a free pin (e.g., GPIO 16\) and share SPI lines (SCK 18, MISO 19, MOSI 23).
-
-### Step 4: Add the CC1101 RF Module
-
-This module lets your device send and receive radio signals.
-
-1. Find the Pins: On your *CC1101*, look for CSN, SCK, MISO, MOSI, GDO0, VCC, GND.  
-2. Power and Ground:  
-   * Wire VCC to *ESP32-S3* 3.3V.  
-   * Wire GND to *ESP32-S3* GND.  
-3. SPI Connections:  
-   * CSN → *ESP32-S3* GPIO 5 (this is its own special pin).  
-   * SCK → *ESP32-S3* GPIO 18 (same as the display—it’s okay to share\!).  
-   * MISO → *ESP32-S3* GPIO 19\.  
-   * MOSI → *ESP32-S3* GPIO 23 (shared with the display).  
-4. Extra Option:  
-   * Connect GDO0 to *ESP32-S3* GPIO 13 if you want to detect signals (optional for now).  
-5. Check It: Ensure no wires are touching where they shouldn’t.
-
-### Step 5: Add the NRF24 Module (Optional)
-
-This module provides 2.4GHz wireless communication.
-
-1. Find the Pins: On the NRF24, look for CE, CSN, SCK, MOSI, MISO, IRQ, VCC, GND.  
-2. Power and Ground:  
-   * Wire VCC to *ESP32-S3* 3.3V.  
-   * Wire GND to *ESP32-S3* GND.  
-3. SPI Connections:  
-   * CSN → *ESP32-S3* GPIO 17 (this is its own special pin).  
-   * CE → *ESP32-S3* GPIO 6\.  
-   * SCK → *ESP32-S3* GPIO 18 (shared with others).  
-   * MISO → *ESP32-S3* GPIO 19 (shared).  
-   * MOSI → *ESP32-S3* GPIO 23 (shared).  
-4. Extra Option:  
-   * Connect IRQ to *ESP32-S3* GPIO 1 if needed (optional).  
-5. Check It: Ensure no wires are touching where they shouldn’t.
-
-### Step 6: Wire the TSOP1738 IR Receiver
-
-This catches infrared signals (like from a remote).
-
-1. Locate Pins: Find OUT, VCC, GND on the *TSOP1738* (it’s small, so look closely\!).  
-2. Power It:  
-   * Connect VCC to *ESP32-S3* 3.3V.  
-   * Connect GND to *ESP32-S3* GND.  
-3. Signal Wire:  
-   * Connect OUT to *ESP32-S3* GPIO 7\.  
-4. Test Fit: Make sure it’s snug on the breadboard.
-
-### Step 7: Add the IR LED(s)
-
-These send infrared signals.
-
-1. Simple Setup:  
-   * Take one *IR LED*.  
-   * Connect the longer leg (anode) to *ESP32-S3* GPIO 8\.  
-   * Connect the shorter leg (cathode) to a 330 Ω resistor, then connect the other end of the resistor to *ESP32-S3* GND.  
-2. Boosted Setup (Optional): If you want more range:  
-   * Grab a 2N2222 transistor.  
-   * Connect *ESP32-S3* GPIO 8 to the transistor’s base through a 1 kΩ resistor (use a *10 kΩ* and adjust if needed).  
-   * Connect the transistor’s collector to 3.3V through the *IR LED* and a 100 Ω resistor (tweak with your *330 Ω* if needed).  
-   * Connect the transistor’s emitter to GND.  
-3. Tip: The simple setup works fine for most uses—try it first\!
-
-### Step 8: Connect the PN532 NFC/RFID Module
-
-This reads NFC tags and cards.
-
-1. Pin Check: Find SDA, SCL, VCC, GND on the *PN532*.  
-2. Power and Ground:  
-   * Wire VCC to *ESP32-S3* 3.3V.  
-   * Wire GND to *ESP32-S3* GND.  
-3. I²C Wires:  
-   * SDA → *ESP32-S3* GPIO 21\.  
-   * SCL → *ESP32-S3* GPIO 22\.  
-4. Secure It: Push it into the breadboard so it stays put.
-
-### Step 9: Hook Up the Joystick Module
-
-This is your main directional control.
-
-1. Pin Check: Find X-axis, Y-axis, Button (often labeled SW), VCC, and GND.  
-2. Power and Ground:  
-   * VCC → *ESP32-S3* 3.3V.  
-   * GND → *ESP32-S3* GND.  
-3. Wiring:  
-   * X-axis → *ESP32-S3* GPIO 36 (Analog pin).  
-   * Y-axis → *ESP32-S3* GPIO 39 (Analog pin).  
-   * Button/SW → *ESP32-S3* GPIO 15\.  
-4. Add Pull-up: For the Button/SW pin (*GPIO 15*), connect a 10 kΩ resistor to 3.3V. This keeps it stable until pressed.  
-5. Move It: Tilt it around to ensure it works smoothly.
-
-### Step 10: Wire the Control Buttons
-
-These are your right-hand action buttons. We will wire four of them.
-
-1. Place Buttons: Place four tactile push buttons on your breadboard.  
-2. Wire It Up:  
-   * Connect one side of all four buttons to *ESP32-S3* GND.  
-   * Connect the other side of each button to a unique GPIO pin:  
-     * Button 1 (e.g., "Up") → *ESP32-S3* GPIO 11\.  
-     * Button 2 (e.g., "Down") → *ESP32-S3* GPIO 14\.  
-     * Button 3 (e.g., "Left/Back") → *ESP32-S3* GPIO 9\.  
-     * Button 4 (e.g., "Right/OK") → *ESP32-S3* GPIO 10\.  
-3. Add Pull-ups:  
-   * For each button pin (*GPIO 11, 14, 9, 10*), connect a 10 kΩ resistor from the GPIO pin to 3.3V. This keeps them “high” until you press a button, which pulls the pin to GND.  
-4. Test Press: Push each button to make sure it feels right.
-
-### Step 11: Add Top Buttons (Optional)
-
-These act like shoulder buttons on a game controller.
-
-1. Wire It Up:  
-   * Connect one side of two more tactile buttons to *ESP32-S3* GND.  
-   * Connect the other side of each button to a unique GPIO pin:  
-     * Top-Left Button → *ESP32-S3* GPIO 26\.  
-     * Top-Right Button → *ESP32-S3* GPIO 32\.  
-2. Add Pull-ups:  
-   * Just like before, connect a 10 kΩ resistor from each pin (*GPIO 26, 32*) to 3.3V.
-
-### Step 12: Add the MicroSD Module (Optional)
-
-This lets you save logs or themes. Note: If using the ILI9341 display's built-in SD slot, you can skip this.
-
-1. Pin Check: Find CS, SCK, MISO, MOSI, VCC, GND on the module.  
-2. Power It:  
-   * Connect VCC to *ESP32-S3* 3.3V.  
-   * Connect GND to *ESP32-S3* GND.  
-3. SPI Wires:  
-   * CS → *ESP32-S3* GPIO 16 (pick a free pin if 16 is used).  
-   * SCK → *ESP32-S3* GPIO 18 (shared with others).  
-   * MISO → *ESP32-S3* GPIO 19 (shared).  
-   * MOSI → *ESP32-S3* GPIO 23 (shared).  
-4. Insert Card: Pop in a *MicroSD card* to test later.
-
-### Step 13: Set Up the Power System
-
-This powers everything with a battery and switch.
-
-1. Battery to Charger:  
-   * Connect the *2000 mAh Li-Po battery* \+ to *TC4056* B+ and – to *TC4056* B–.  
-2. Add the Switch:  
-   * Wire *TC4056* OUT+ to one side of the 2-pin rocker switch.  
-   * Wire the other side of the switch to the LM2596T regulator input.  
-3. Regulator Setup:  
-   * Connect the regulator’s output to *ESP32-S3* 3.3V.  
-   * Connect the regulator’s ground to *ESP32-S3* GND.  
-4. Finish Ground:  
-   * Wire *TC4056* OUT– to *ESP32-S3* GND.  
-5. Smooth It Out:  
-   * Add a 10 µF capacitor between *ESP32-S3* *3.3V* and *GND*.  
-6. Test Flip: Flip the switch to see if it powers on (once everything’s connected).
-
-### Step 14: Check Everything
-
-1. Look Over Wires: Use your multimeter to make sure nothing’s touching where it shouldn’t.  
-2. Power Up: Plug in the USB or flip the switch (once the battery’s ready). The display should light up with the *Bruce* logo after flashing.  
-3. Test Each Part:  
-   * Display: See if the screen shows the menu.  
-   * Joystick & Buttons: Use the joystick to navigate menus. Use the right-hand buttons for selecting and going back.  
-   * IR Stuff: Point a remote at the *TSOP1738*, test the *LED* with the firmware.  
-   * RF Module: Check *CC1101* in the firmware.  
-   * NFC: Tap a tag to the *PN532*.  
-   * Optional Parts: Test the *MicroSD* and *top buttons* if connected.
-
-### Step 15: Put It in a Case
-
-1. Get the Case: Get a case and cut holes for the *display*, *joystick*, *buttons*, *USB port*, *IR LED*, and *power switch*.  
-2. Fit Everything: Place the breadboard, battery, and modules inside. Use screws or sticky pads to hold them.  
-3. Tidy Up: Tuck wires neatly so the case closes.  
-4. Close It: Snap or screw the case shut—you’re done\!
+### Joystick & Buttons
+| Function           | ESP32-S3 Pin |
+|--------------------|--------------|
+| Joystick X-Axis    | GPIO 36      |
+| Joystick Y-Axis    | GPIO 39      |
+| Joystick Button    | GPIO 15      |
+| Right Button 1 (Up)| GPIO 11      |
+| Right Button 2 (Down)| GPIO 14      |
+| Right Button 3 (Back)| GPIO 9       |
+| Right Button 4 (OK)  | GPIO 10      |
+| Top-Left Button    | GPIO 26      |
+| Top-Right Button   | GPIO 32      |
 
 ---
 
-## Controlling the Device
+## 🛠️ Let's Build It! (Assembly & Flashing)
 
-* Display: Shows the interface sideways (*landscape mode*).  
-* Joystick: Used for up/down/left/right navigation within menus.  
-* Joystick Button: Typically used for selecting or entering a sub-menu.  
-* Right-Hand Buttons:  
-  * Can be configured in the firmware.  
-  * A common layout is one button for OK/Select and another for Back/Cancel. The other two can be for custom actions.  
-* Top Buttons (Optional): Can be assigned to special functions within the Bruce firmware.  
-* IR & RF: Use the menus to learn and send signals.  
-* NFC: Tap tags to the PN532 module to read or copy them.
+### Tools You'll Need
+- A soldering iron and some solder.
+- A breadboard or protoboard for assembly.
+- Jumper wires.
+- Wire cutters/strippers.
+- A multimeter (very important for testing!).
 
----
+### Assembly Steps: One Step at a Time
 
-## Programming the Device
+We'll build the power system first. This is the safest way to avoid accidentally damaging the ESP32 brain.
 
-Flashing the Bruce firmware can be done in several ways. The first method is the easiest, while the other two use the Arduino IDE for more advanced customization.
+**Step 1: Build a Safe and Tested Power Supply**
+1.  **Battery to Charger**: Solder the red wire (`+`) of your battery to the `B+` pad on the TC4056 charger. Solder the black wire (`-`) to the `B-` pad.
+2.  **Add the Power Switch**: Take the `OUT+` wire from the charger and solder it to one leg of your power switch. Solder another wire from the switch's other leg to the `IN+` pad of your LM2596T voltage regulator.
+3.  **Connect Ground**: Solder the `OUT-` from the charger directly to the `IN-` pad on the regulator.
+4.  **CRITICAL - Set the Voltage!**: Before you connect anything else, plug in the battery and flip the power switch ON. Use your multimeter to measure the voltage between the `OUT+` and `OUT-` pads of the LM2596T regulator. Use a small screwdriver to gently turn the tiny screw (potentiometer) on the blue box until your multimeter reads **3.3 Volts**. This ensures you send the correct, safe voltage to all your components.
+5.  **Power Down**: Flip the switch OFF. Your power supply is now ready and safe!
 
-### Method 1: The Easy Way (Official Web Flasher)
+**Step 2: Connect the Brain and Screen**
+1.  **Power the ESP32**: Connect the `OUT+` (which is now 3.3V) from your regulator to the `3V3` pin of the ESP32. Connect `OUT-` to a `GND` pin on the ESP32.
+2.  **Hook up the Screen**: Connect the screen's VCC pin to the 3.3V power and GND to ground. Then, wire up the SPI (`SCK`, `MOSI`, `MISO`) and control pins (`CS`, `DC`, `RST`) to the GPIO numbers listed in the pinout table.
 
-This is the highly recommended method for most users as it requires no software installation. \[1\]
+**Step 3: Add the Controls**
+1.  **Wire the Joystick**: Connect the joystick's X and Y pins to their GPIOs. Connect the switch (`SW`) pin and all your other buttons to their GPIOs.
+2.  **Ground the Buttons**: Connect the other leg of every single button (including the joystick switch) to Ground (GND). Don't worry about other resistors; we'll use the ESP32's internal ones.
 
-1. Get Ready to Flash:  
-   * Ensure any necessary USB-to-serial drivers are installed for your ESP32-S3 board.  
-   * Put the device in Bootloader Mode: Disconnect the USB cable, press and hold the "BOOT" button on the ESP32-S3, then reconnect the USB cable while still holding it. Release the button after a second.  
-2. Use the Flasher:  
-   * Open [https://bruce.computer/flasher](https://bruce.computer/flasher) in a compatible browser (like Chrome or Edge).  
-   * Select "Latest Release" and "Custom Boards Launcher."  
-   * Click CONNECT, choose the correct serial port for your device, and click INSTALL.  
-   * Important: Check the "Erase device" box for a clean install, then click "INSTALL" again. \[2\]  
-3. Restart: Once done, disconnect and reconnect the USB cable. The Bruce firmware should boot up.
+**Step 4: Wire the Wireless Modules**
+1.  **SPI Modules (SD Card, CC1101, nRF24)**: Connect the `SCK`, `MOSI`, and `MISO` pins of all these modules to the same three shared ESP32 pins. Then, give each module its own unique `CS` connection to the GPIO listed in the table. This `CS` pin is how the ESP32 chooses which module it wants to talk to.
+2.  **NFC Module (PN532)**: This one is easier. Just connect `SDA` to its GPIO and `SCL` to its GPIO.
 
-### Programming with the Arduino IDE: Initial Setup
+**Step 5: The Final Touches**
+1.  **IR Receiver**: The TSOP1738 has three legs. Connect its VCC to 3.3V, GND to ground, and the Signal pin to `GPIO 7`.
+2.  **IR LED**: Connect the long leg (Anode, `+`) of the IR LED to `GPIO 8`. Connect the short leg (Cathode, `-`) to one end of a 220Ω or 330Ω resistor. Connect the other end of the resistor to `GND`. **Don't skip the resistor**, or the LED will burn out instantly!
+3.  **Safety Check!**: Before you turn it on for the first time, use your multimeter's "continuity" mode (the one that beeps) to check that your `3.3V` and `GND` connections are not touching anywhere. If it beeps, you have a short circuit! Find and fix it before you proceed.
 
-Methods 2 and 3 require the Arduino IDE. If you don't have it set up for ESP32, follow these steps first:
+### Getting the Software (Firmware) Installed
 
-1. Install Arduino IDE: Download and install the latest version of the Arduino IDE (v2.0 or newer is recommended).  
-2. Add ESP32 Boards:  
-   * Go to File \> Preferences.  
-   * In the "Additional boards manager URLs" field, paste this URL: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package\_esp32\_index.json  
-   * Go to Tools \> Board \> Boards Manager..., search for "esp32", and install the package by Espressif Systems.
+#### Method 1: The Easy Way (Web Flasher)
+This is best for beginners. You don't need to install any coding software.
+1.  **Bootloader Mode**: Find the "BOOT" button on your ESP32. Hold it down. While holding it, plug the ESP32 into your computer with a USB cable. Then you can release the button.
+2.  **Go Online**: Open the Chrome or Edge web browser and navigate to **[https://bruce.computer/flasher](https://bruce.computer/flasher)**.
+3.  **Flash It**:
+    *   Choose "Latest Release" and "Custom Boards Launcher".
+    *   Click **CONNECT** and pick the port your ESP32 is on.
+    *   Click **INSTALL**. **This is important:** check the "Erase device" box to ensure a clean installation.
+4.  **Restart**: Unplug and replug the USB. Your device should now boot up!
 
-### Method 2: From Source with Arduino IDE (Official GitHub)
+#### Method 2: The Coder's Way (VS Code + PlatformIO)
+If you want to tinker with the code, this is the method for you.
+1.  **Get Set Up**: Install VS Code, then find and install the "PlatformIO IDE" extension from the Extensions tab.
+2.  **Get the Code**: Download the code by cloning it: `git clone https://github.com/sivabala21/Bruce.git`. Open the folder in VS Code.
+3.  **Build**: PlatformIO is smart and will ask to install what it needs. Let it. The main configuration is in the `platformio.ini` file.
+4.  **Upload**: Put the ESP32 in **Bootloader Mode** as described in Method 1. In VS Code, click the little alien head icon for PlatformIO, find your project, and click "Upload".
 
-This method lets you compile the official source code but requires manual configuration for your custom hardware.
-
-* Source: [https://github.com/pr3y/Bruce](https://github.com/pr3y/Bruce)  
-1. Download the Code: Go to the GitHub link above, click Code \> Download ZIP, and extract the folder. Open the Bruce-main folder and you should see Bruce.ino.  
-2. Install Libraries: The project depends on several external libraries. You must install them using the Arduino Library Manager (Sketch \> Include Library \> Manage Libraries...). Search for and install the following:  
-   * LovyanGFX (for the display)  
-   * Adafruit GFX Library  
-   * Adafruit BusIO  
-   * Adafruit PN532 (for NFC)  
-   * ArduinoJson  
-   * You may need others depending on the features you use. The compiler will tell you if anything is missing.  
-3. Configure for Your Hardware: This is the most critical step. You need to tell the code which GPIO pins you used.  
-   * In the Arduino sketch folder, navigate to include \> configs.  
-   * Create a copy of an existing ESP32-S3 config file (e.g., LILYGO\_T\_DECK.h) and rename it my\_custom\_board.h.  
-   * Open my\_custom\_board.h and carefully edit the \#define statements for each pin (e.g., PIN\_DISPLAY\_CS, PIN\_JOYSTICK\_X, etc.) to match your wiring from the assembly guide. This step must be precise.  
-   * Open Bruce.ino and add \#define BRUCE\_CUSTOM\_BOARD at the top. Then, go to include/configs/KnownBoards.h and add a new section that includes your custom header when BRUCE\_CUSTOM\_BOARD is defined.  
-4. Select Board and Upload:  
-   * In the Arduino IDE, go to Tools \> Board and select ESP32S3 Dev Module.  
-   * Under Tools, make sure PSRAM is set to OPI PSRAM.  
-   * Put your device into Bootloader Mode (see Method 1).  
-   * Select the correct COM port under Tools \> Port.  
-   * Click the Upload button.
-
-### Method 3: Pre-configured Source with Arduino IDE (Community Fork)
-
-This method is easier than Method 2 because the code is already modified for the ILI9341 display. You may only need to adjust the control pins.
-
-* Source: [https://github.com/sivabala21/Bruce](https://github.com/sivabala21/Bruce)  
-1. Download and Prepare: Download the code as a ZIP from the link above and extract it. Open Bruce.ino in the Arduino IDE.  
-2. Install Libraries: Follow Step 2 from Method 2 to install the necessary libraries like LovyanGFX and others via the Library Manager.  
-3. Check Pin Configuration:  
-   * This fork is pre-configured for an ILI9341 display, so you shouldn't need to change the display pins.  
-   * However, you must check the pin definitions for your controls (joystick, buttons) and other modules (CC1101, PN532, etc.). Find the relevant configuration file (likely in the include/configs folder) and verify that the GPIO numbers match your wiring. Adjust as needed.  
-4. Select Board and Upload:  
-   * Follow Step 4 from Method 2: select ESP32S3 Dev Module, enable OPI PSRAM, put the board in Bootloader Mode, select the COM port, and click Upload.
+#### Method 3: The Classic Way (Arduino IDE)
+1.  **Setup Arduino**: Install the Arduino IDE and add the ESP32 boards to it via the Preferences menu.
+2.  **Get the Code**: Download the code just like in the PlatformIO method.
+3.  **Add Libraries**: Open the project. The IDE will probably complain about missing libraries. Use the Library Manager (`Sketch > Include Library > Manage Libraries...`) to find and install **LovyanGFX** and any others it needs.
+4.  **Check Your Pins**: Make sure the pins defined in the code match your wiring from the tables above!
+5.  **Upload**: Select "ESP32S3 Dev Module" as your board. Put the device in **Bootloader Mode** and click the "Upload" arrow.
 
 ---
 
-## Final Notes
+## 📚 What Can It Do? (Firmware Features)
 
-* Display Setup: The firmware should be configured for landscape mode. When using the Arduino IDE, the LovyanGFX library needs to be correctly configured for the ILI9341 driver within the project's source code.  
-* MicroSD: The ILI9341 display often has a built-in SD card slot. You can use this as an alternative to the separate MicroSD module by wiring its CS pin.  
-* IR LED: The simple setup is sufficient for most uses unless you require extended range.
+- **Explore Radio Signals**: Control Sub-GHz, 2.4GHz, and NFC devices.
+- **Easy to Use**: A simple, intuitive interface you can navigate with the joystick.
+- **Universal Remote**: Learn and copy signals from your TV remotes.
+- **Computer Tricks**: Act like a keyboard or mouse to run commands on a PC (use responsibly!).
+- **Save Everything**: Store your captures, payloads, and themes on the MicroSD card.
+- **Make It Your Own**: It's all open-source, so you can change it however you like!
 
-Have fun building your device\!  
+---
+
+## ⚠️ A Quick Disclaimer
+
+This is a powerful tool meant for learning and experimentation. Please be responsible and respect others' privacy and security. Only use it on your own devices and networks. Know and follow your local laws.
+
+---
+
+## 🙏 Thank You!
+
+A huge thank you to the **Bruce Firmware Team** for creating such an amazing piece of software and to the entire **open-source community** for making projects like this possible. Happy building!
